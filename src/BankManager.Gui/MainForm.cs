@@ -388,6 +388,27 @@ public sealed class MainForm : Form
         _s.Speichern(this);
     }
 
+    public void Abrufen(Bank? nurBank = null)
+    {
+        var banken = (nurBank != null ? [nurBank] : _s.T.Banken).Where(b => b.AutoAbruf).ToList();
+        if (banken.Count == 0)
+        {
+            MessageBox.Show(this, "Für den automatischen Abruf öffne eine Bank → „Bearbeiten“ und schalte unten „Kontostände automatisch abrufen“ ein (FinTS-Adresse, Anmeldename).\n\nAußerdem braucht der Bank-Manager einmalig deine FinTS-Produktnummer (Einstellungen).",
+                "Kontostände abrufen", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        if (_s.Einstellungen.FinTsProduktnummer.Trim().Length == 0)
+        {
+            MessageBox.Show(this, "Es fehlt noch deine FinTS-Produktnummer. Trage sie unter Einstellungen → „Automatischer Abruf“ ein, sobald du sie von der Deutschen Kreditwirtschaft bekommen hast.",
+                "Kontostände abrufen", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Zeige(EinstellungenSeite);
+            return;
+        }
+        using var d = new AbrufDialog(_s, banken);
+        d.ShowDialog(this);
+        if (_s.Daten != null) { _aktuell?.Aktualisieren(); if (d.Aktualisiert > 0) Status($"{Wort.Anzahl(d.Aktualisiert, "Kontostand", "Kontostände")} abgerufen."); }
+    }
+
     public void KontoNeu(Bank? bank)
     {
         if (_s.T.Banken.Count == 0) { BankNeu(); return; }

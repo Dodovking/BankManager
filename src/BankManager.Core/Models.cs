@@ -69,7 +69,9 @@ public sealed class Bank
     public string Ansprechpartner { get; set; } = "";
     public string Notizen { get; set; } = "";
     public List<Konto> Konten { get; set; } = [];
+    public FinTsZugang? FinTs { get; set; }
 
+    [JsonIgnore] public bool AutoAbruf => FinTs is { Aktiv: true };
     [JsonIgnore] public decimal Summe => Konten.Sum(k => k.Kontostand);
     [JsonIgnore] public string AnzeigeKuerzel => Kuerzel.Length > 0 ? Kuerzel : BankKatalog.KuerzelAus(Name);
 }
@@ -103,6 +105,20 @@ public sealed class Konto
         Verlauf.Add(new Stand { Datum = t, Betrag = betrag });
         Verlauf.Sort((a, b) => a.Datum.CompareTo(b.Datum));
     }
+}
+
+/// <summary>Read-only FinTS access (balances only). The PIN is only kept if the user chose "PIN merken".</summary>
+public sealed class FinTsZugang
+{
+    public bool Aktiv { get; set; }
+    public string Url { get; set; } = "";
+    public string Blz { get; set; } = "";
+    public string Benutzerkennung { get; set; } = "";
+    public string Pin { get; set; } = "";
+    public bool PinMerken { get; set; }
+    public string? KundensystemId { get; set; }
+    public DateTime? LetzterAbruf { get; set; }
+    public string LetzterFehler { get; set; } = "";
 }
 
 public sealed class Stand
@@ -165,6 +181,7 @@ public sealed class Einstellungen
     public int AutoSperreMinuten { get; set; } = 10;
     public bool BetraegeVerbergen { get; set; }
     public bool UpdatesPruefen { get; set; } = true;
+    public string FinTsProduktnummer { get; set; } = "";
     public int FensterBreite { get; set; }
     public int FensterHoehe { get; set; }
     public bool Maximiert { get; set; }

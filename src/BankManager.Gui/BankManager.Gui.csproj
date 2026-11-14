@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BankManager.Core\BankManager.Core.csproj" />
+    <ProjectReference Include="..\BankManager.Banking\BankManager.Banking.csproj" />
   </ItemGroup>
 
 </Project>

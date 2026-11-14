@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BankManager.Core\BankManager.Core.csproj" />
+    <ProjectReference Include="..\..\src\BankManager.Banking\BankManager.Banking.csproj" />
   </ItemGroup>
 
 </Project>

@@ -87,11 +87,12 @@ public class EditDialog : DialogBase
 public sealed class BankDialog : EditDialog
 {
     private readonly Bank _bank;
-    private readonly InputBox _name, _kuerzel, _website, _bic, _hotline, _login, _pw, _kontakt, _notizen;
+    private readonly InputBox _name, _kuerzel, _website, _bic, _hotline, _login, _pw, _kontakt, _notizen, _fintsUrl, _fintsBlz, _fintsUser, _fintsPin;
+    private readonly ToggleSwitch _fintsAn, _fintsPinMerken;
     private readonly FarbFeld _farbe;
     private Color _farbWert;
 
-    public BankDialog(Bank bank, bool neu) : base(neu ? "Bank hinzufügen" : "Bank bearbeiten", neu ? "Hinzufügen" : "Speichern", 560, 640)
+    public BankDialog(Bank bank, bool neu) : base(neu ? "Bank hinzufügen" : "Bank bearbeiten", neu ? "Hinzufügen" : "Speichern", 560, 680)
     {
         _bank = bank;
         _farbWert = Farben.Lesen(bank.Farbe, Theme.P.Accent);
@@ -131,6 +132,20 @@ public sealed class BankDialog : EditDialog
         Place(zeigen, zeigen.Height, 10);
         _kontakt = Feld("Ansprechpartner / Filiale", bank.Ansprechpartner);
         _notizen = Feld("Notizen", bank.Notizen, multiline: true);
+        AddHeading("Automatischer Abruf der Kontostände (FinTS, nur lesen)");
+        AddHint("Der Bank-Manager fragt die Kontostände direkt bei deiner Bank ab – ohne Firma dazwischen. Überweisungen sind damit nicht möglich. Die FinTS-Adresse steht in der FinTS-Bankenliste bzw. auf der Website deiner Bank.");
+        Y += Ui.S(4);
+        var f = bank.FinTs ?? new FinTsZugang();
+        _fintsAn = new ToggleSwitch("Kontostände automatisch abrufen") { Checked = f.Aktiv };
+        _fintsAn.Width = ContentWidth;
+        Place(_fintsAn, _fintsAn.Height, 8);
+        _fintsUrl = Feld("FinTS-Adresse (https://…)", f.Url);
+        (_fintsBlz, _fintsUser) = Paar("Bankleitzahl (leer = aus IBAN)", new InputBox { Text = f.Blz }, "Anmeldename / Kundennummer", new InputBox { Text = f.Benutzerkennung.Length > 0 ? f.Benutzerkennung : bank.Anmeldename });
+        _fintsPin = Feld("Online-Banking-PIN (nur wenn „PIN merken“)", f.Pin);
+        _fintsPin.Box.UseSystemPasswordChar = true;
+        _fintsPinMerken = new ToggleSwitch("PIN verschlüsselt merken (sonst bei jedem Abruf fragen)") { Checked = f.PinMerken };
+        _fintsPinMerken.Width = ContentWidth;
+        Place(_fintsPinMerken, _fintsPinMerken.Height, 10);
         FinishLayout();
     }
 
@@ -140,7 +155,17 @@ public sealed class BankDialog : EditDialog
         _farbe.Farbe = c;
     }
 
-    protected override string? Pruefen() => _name.Text.Trim().Length == 0 ? "Bitte einen Namen für die Bank eingeben." : null;
+    protected override string? Pruefen()
+    {
+        if (_name.Text.Trim().Length == 0) return "Bitte einen Namen für die Bank eingeben.";
+        if (_fintsAn.Checked)
+        {
+            if (!_fintsUrl.Text.Trim().StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return "Für den automatischen Abruf bitte die FinTS-Adresse eintragen (beginnt mit https://).";
+            if (_fintsUser.Text.Trim().Length == 0) return "Für den automatischen Abruf bitte Anmeldename bzw. Kundennummer eintragen.";
+            if (_fintsBlz.Text.Trim().Length is > 0 and not 8) return "Die Bankleitzahl hat 8 Ziffern.";
+        }
+        return null;
+    }
 
     protected override void Uebernehmen()
     {
@@ -156,6 +181,17 @@ public sealed class BankDialog : EditDialog
         _bank.Passwort = _pw.Text;
         _bank.Ansprechpartner = _kontakt.Text.Trim();
         _bank.Notizen = _notizen.Text.Trim();
+        if (_fintsAn.Checked || _bank.FinTs != null)
+        {
+            var f = _bank.FinTs ??= new FinTsZugang();
+            if (f.Url != _fintsUrl.Text.Trim() || f.Benutzerkennung != _fintsUser.Text.Trim()) f.KundensystemId = null;
+            f.Aktiv = _fintsAn.Checked;
+            f.Url = _fintsUrl.Text.Trim();
+            f.Blz = new string(_fintsBlz.Text.Where(char.IsDigit).ToArray());
+            f.Benutzerkennung = _fintsUser.Text.Trim();
+            f.PinMerken = _fintsPinMerken.Checked;
+            f.Pin = f.PinMerken ? _fintsPin.Text : "";
+        }
     }
 }
 

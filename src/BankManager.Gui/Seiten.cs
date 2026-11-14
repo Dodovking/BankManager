@@ -67,8 +67,12 @@ public sealed class UebersichtSeite : Seite
 
     public override string Titel => "Übersicht";
     public override string Untertitel => $"Stand {DateTime.Now:dddd, d. MMMM yyyy}";
-    public override string? AktionText => "Kontostand eintragen";
-    public override void HauptAktion(Control anker) => App.StandMenue(anker);
+    public override string? AktionText => S.Daten != null && T.Banken.Any(b => b.AutoAbruf) ? "Kontostände abrufen" : "Kontostand eintragen";
+    public override void HauptAktion(Control anker)
+    {
+        if (T.Banken.Any(b => b.AutoAbruf)) App.Abrufen();
+        else App.StandMenue(anker);
+    }
 
     public override void Aktualisieren()
     {
@@ -430,12 +434,15 @@ public sealed class BankDetailSeite : Seite
         online.Click += (_, _) => App.OnlineBanking(b);
         var bearbeiten = new FlatButton("Bearbeiten");
         bearbeiten.Click += (_, _) => App.BankBearbeiten(b);
+        var abrufen = new FlatButton("Kontostände abrufen") { Visible = b.AutoAbruf };
+        abrufen.Click += (_, _) => App.Abrufen(b);
         var loeschen = new FlatButton("Löschen", ButtonKind.Danger);
         loeschen.Click += (_, _) => App.BankLoeschen(b);
         loeschen.Location = new Point(w - loeschen.Width, y);
         bearbeiten.Location = new Point(loeschen.Left - Ui.S(8) - bearbeiten.Width, y);
         online.Location = new Point(bearbeiten.Left - Ui.S(8) - online.Width, y);
-        _innen.Controls.AddRange([zurueck, online, bearbeiten, loeschen]);
+        abrufen.Location = new Point(online.Left - Ui.S(8) - abrufen.Width, y);
+        _innen.Controls.AddRange([zurueck, abrufen, online, bearbeiten, loeschen]);
         y += zurueck.Height + Ui.S(16);
 
         var info = new TitelKarte { Titel = "Zugangsdaten & Kontakt", Rechts = "verschlüsselt gespeichert" };
@@ -471,6 +478,9 @@ public sealed class BankDetailSeite : Seite
             iy += Math.Max(Ui.S(32), v.PreferredHeight + Ui.S(12));
         }
         Zeile("Online-Banking", b.Website, b.Website);
+        if (b.FinTs is { Aktiv: true } ft)
+            Zeile("Automatischer Abruf", ft.LetzterFehler.Length > 0 ? "Fehler beim letzten Abruf: " + ft.LetzterFehler
+                : ft.LetzterAbruf is DateTime la ? $"eingerichtet · zuletzt {la:dd.MM.yyyy HH:mm}" : "eingerichtet · noch nicht abgerufen");
         Zeile("Anmeldename", b.Anmeldename, b.Anmeldename);
         Zeile("Passwort", b.Passwort, b.Passwort, geheim: true, passwort: true);
         Zeile("BIC", b.Bic, b.Bic);
@@ -1010,6 +1020,7 @@ public sealed class EinstellungenSeite : Seite
     private readonly Label _updateInfo = Make.Label("", muted: true);
     private readonly Label _pfad = Make.Label("", Ui.Small, muted: true);
     private readonly FlatButton _updateKnopf = new("Jetzt nach Updates suchen", ButtonKind.Primary);
+    private readonly InputBox _produktnummer = new() { Width = Ui.S(320) };
     private static readonly int[] SperrMinuten = [1, 5, 10, 30, 0];
     private bool _laedt;
 
@@ -1092,6 +1103,15 @@ public sealed class EinstellungenSeite : Seite
             [Knopf("Sicherung speichern unter …", SicherungSpeichern, ButtonKind.Primary), Knopf("Sicherung laden …", SicherungLaden), Knopf("Datenordner öffnen", () => Ui.OpenInExplorer(S.DatenOrdner))],
             [Make.Label("Die Sicherung ist genauso verschlüsselt wie dein Tresor – speichere sie z. B. auf einem USB-Stick. Zusätzlich legt der Bank-Manager täglich automatisch eine Kopie der letzten 5 Tage an.", Ui.Small, muted: true, width: Ui.S(760))],
             [_pfad]);
+        var speichern = Knopf("Speichern", () =>
+        {
+            S.Einstellungen.FinTsProduktnummer = _produktnummer.Text.Trim();
+            S.EinstellungenSpeichern();
+            App.Status("FinTS-Produktnummer gespeichert.");
+        });
+        Karte("Automatischer Abruf (FinTS)",
+            [Make.Label("FinTS-Produktnummer"), _produktnummer, speichern],
+            [Make.Label("Banken lassen den direkten Abruf nur mit einer registrierten Produktnummer zu. Du bekommst sie kostenlos von der Deutschen Kreditwirtschaft (Formular an registrierung@hbci-zka.de). Danach bei jeder Bank unter „Bearbeiten“ den automatischen Abruf einschalten. Es werden nur Kontostände gelesen – Überweisungen sind nicht möglich.", Ui.Small, muted: true, width: Ui.S(760))]);
         Karte("Updates", [_updateKnopf, _updateInfo], [_updates]);
         UpdateStatus(null);
     }
@@ -1105,6 +1125,7 @@ public sealed class EinstellungenSeite : Seite
         _sperre.SelectedIndex = i < 0 ? 2 : i;
         _verbergen.Checked = e.BetraegeVerbergen;
         _updates.Checked = e.UpdatesPruefen;
+        _produktnummer.Text = e.FinTsProduktnummer;
         _pfad.Text = $"Speicherort: {S.Datei.Pfad}\nAutomatische Kopien: {S.Datei.SicherungsOrdner}";
         _laedt = false;
         Anordnen();
