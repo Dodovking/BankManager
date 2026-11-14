@@ -77,12 +77,33 @@ public sealed class UpdateChecker
         {
             if (resp.StatusCode == HttpStatusCode.NotFound) return null;
             if (resp.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
-                throw new UpdateException("GitHub hat gerade zu viele Anfragen von dir bekommen. Bitte in einer Stunde noch einmal versuchen.");
+                return await GetLatestViaWebsiteAsync(ct).ConfigureAwait(false)
+                       ?? throw new UpdateException("GitHub hat gerade zu viele Anfragen von dir bekommen. Bitte in einer Stunde noch einmal versuchen.");
             if (!resp.IsSuccessStatusCode)
                 throw new UpdateException($"GitHub hat mit Fehler {(int)resp.StatusCode} geantwortet.");
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Parse(json);
         }
+    }
+
+    /// <summary>Fallback when the GitHub API rate limit (60/h without login) is used up: read the tag from the "latest" redirect.</summary>
+    private async Task<UpdateInfo?> GetLatestViaWebsiteAsync(CancellationToken ct)
+    {
+        if (!_releaseUrl.StartsWith("https://api.github.com/", StringComparison.Ordinal)) return null;
+        try
+        {
+            using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+            http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BankManager", "1"));
+            using var resp = await http.GetAsync($"https://github.com/{Repository}/releases/latest", ct).ConfigureAwait(false);
+            var tag = resp.Headers.Location?.ToString().Split('/').LastOrDefault();
+            var version = ParseVersion(tag);
+            if (version == null || tag == null) return null;
+            var basis = $"https://github.com/{Repository}/releases/download/{tag}/";
+            return new UpdateInfo(version, tag, tag, "", $"https://github.com/{Repository}/releases/tag/{tag}", null,
+                basis + ExeAssetName, 0, null, basis + HashAssetName);
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException) { return null; }
     }
 
     public static UpdateInfo Parse(string json)
