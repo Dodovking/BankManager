@@ -108,6 +108,15 @@ public sealed class TresorDatei
 
     public void Exportieren(string ziel) => File.Copy(Pfad, ziel, true);
 
+    /// <summary>"Passwort vergessen": moves the vault aside (never deletes it) so a new one can be created. Returns the new path.</summary>
+    public string Beiseitelegen()
+    {
+        Sperren();
+        var ziel = Path.Combine(Path.GetDirectoryName(Pfad)!, $"tresor-vergessen-{DateTime.Now:yyyyMMdd-HHmmss}.bmtresor");
+        File.Move(Pfad, ziel);
+        return ziel;
+    }
+
     private void NeuerSchluessel(string passwort)
     {
         Sperren();

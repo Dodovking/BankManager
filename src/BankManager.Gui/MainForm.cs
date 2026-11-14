@@ -241,6 +241,7 @@ public sealed class MainForm : Form
         _sperrSeite?.Dispose();
         _sperrSeite = new SperrSeite(_s);
         _sperrSeite.Entsperrt += Entsperren;
+        _sperrSeite.Zurueckgesetzt += () => BeginInvoke(Sperren);
         _root.Controls.Add(_sperrSeite);
         Theme.Apply(_sperrSeite);
         if (IsHandleCreated) BeginInvoke(() => _sperrSeite?.Fokus());

@@ -16,6 +16,7 @@ public sealed class SperrSeite : Panel
     private bool _busy;
 
     public event Action<Tresor>? Entsperrt;
+    public event Action? Zurueckgesetzt;
 
     public SperrSeite(Sitzung s)
     {
@@ -24,7 +25,7 @@ public sealed class SperrSeite : Panel
         Dock = DockStyle.Fill;
         DoubleBuffered = true;
         Controls.Add(_karte);
-        _karte.Size = new Size(Ui.S(440), Ui.S(_neu ? 470 : 330));
+        _karte.Size = new Size(Ui.S(440), Ui.S(_neu ? 470 : 370));
 
         int x = Ui.S(36), w = _karte.Width - Ui.S(72), y = Ui.S(32);
         var logo = new PictureBox { Image = Ui.AppIcon().ToBitmap(), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(Ui.S(48), Ui.S(48)), Location = new Point(x, y), BackColor = Color.Transparent };
@@ -69,6 +70,24 @@ public sealed class SperrSeite : Panel
         _ok = new FlatButton(_neu ? "Tresor anlegen" : "Entsperren", ButtonKind.Primary) { Width = w, Height = Ui.S(40), Location = new Point(x, y) };
         _karte.Controls.Add(_ok);
         _ok.Click += async (_, _) => await Los();
+        if (!_neu)
+        {
+            var vergessen = new LinkLabel
+            {
+                Text = "Passwort vergessen?",
+                AutoSize = true,
+                Font = Ui.Small,
+                UseMnemonic = false,
+                BackColor = Color.Transparent,
+                LinkBehavior = LinkBehavior.HoverUnderline,
+                Tag = "keepcolor",
+                LinkColor = Theme.P.Accent,
+                ActiveLinkColor = Theme.P.AccentHover,
+                Location = new Point(x, y + _ok.Height + Ui.S(14)),
+            };
+            vergessen.LinkClicked += (_, _) => Vergessen();
+            _karte.Controls.Add(vergessen);
+        }
         foreach (var b in new[] { _pw, _pw2 })
             b.Box.KeyDown += async (_, e) =>
             {
@@ -131,6 +150,25 @@ public sealed class SperrSeite : Panel
                 _ok.Enabled = true;
                 _ok.Text = _neu ? "Tresor anlegen" : "Entsperren";
             }
+        }
+    }
+
+    private void Vergessen()
+    {
+        var frage = "Das Master-Passwort kann niemand wiederherstellen – auch nicht ich. Das ist Absicht, damit niemand sonst an deine Daten kommt.\n\n" +
+                    "Du kannst aber neu anfangen: Der alte Tresor wird dabei NICHT gelöscht, sondern im Datenordner beiseitegelegt. " +
+                    "Fällt dir das Passwort später wieder ein, holst du ihn über Einstellungen → „Sicherung laden …“ zurück.\n\n" +
+                    "Jetzt mit einem neuen, leeren Tresor neu anfangen?";
+        if (MessageBox.Show(FindForm(), frage, "Passwort vergessen", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+        try
+        {
+            var alt = _s.Datei.Beiseitelegen();
+            MessageBox.Show(FindForm(), $"Der alte Tresor liegt jetzt hier:\n{alt}\n\nLege jetzt ein neues Master-Passwort fest.", "Passwort vergessen", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Zurueckgesetzt?.Invoke();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Fehler("Konnte den alten Tresor nicht verschieben: " + e.Message);
         }
     }
 

@@ -118,6 +118,24 @@ public class TresorTests
     }
 }
 
+public class BeiseiteTests
+{
+    [Fact]
+    public void Beiseitelegen_BehaeltAlteDatei_UndErlaubtNeuenTresor()
+    {
+        using var dir = new TempDir();
+        var pfad = Path.Combine(dir.Pfad, "tresor.bmtresor");
+        var d = new TresorDatei(pfad, 2000);
+        d.Anlegen("vergessen", new Tresor());
+        var alt = d.Beiseitelegen();
+        Assert.False(d.Existiert);
+        Assert.False(d.Entsperrt);
+        Assert.True(File.Exists(alt));
+        d.Anlegen("neu", new Tresor());
+        Assert.NotNull(TresorDatei.Importieren(alt, "vergessen"));
+    }
+}
+
 public class IbanTests
 {
     [Theory]
