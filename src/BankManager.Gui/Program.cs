@@ -7,6 +7,11 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = de;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = de;
+        System.Globalization.CultureInfo.CurrentCulture = de;
+        System.Globalization.CultureInfo.CurrentUICulture = de;
         if (args.Contains(Updater.SelfTestArg, StringComparer.OrdinalIgnoreCase))
         {
             _ = typeof(TresorDatei).Assembly.GetName();

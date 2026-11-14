@@ -88,7 +88,7 @@ public sealed class BankDialog : EditDialog
 {
     private readonly Bank _bank;
     private readonly InputBox _name, _kuerzel, _website, _bic, _hotline, _login, _pw, _kontakt, _notizen;
-    private readonly Panel _farbe;
+    private readonly FarbFeld _farbe;
     private Color _farbWert;
 
     public BankDialog(Bank bank, bool neu) : base(neu ? "Bank hinzufügen" : "Bank bearbeiten", neu ? "Hinzufügen" : "Speichern", 560, 640)
@@ -113,7 +113,7 @@ public sealed class BankDialog : EditDialog
         _name = Feld("Name der Bank", bank.Name);
         _kuerzel = new InputBox { Text = bank.Kuerzel };
         _kuerzel.Box.MaxLength = 4;
-        _farbe = new Panel { Height = _kuerzel.Height, Cursor = Cursors.Hand, BackColor = _farbWert };
+        _farbe = new FarbFeld(_farbWert) { Height = _kuerzel.Height };
         _farbe.Click += (_, _) =>
         {
             using var cd = new ColorDialog { Color = _farbWert, FullOpen = true };
@@ -137,7 +137,7 @@ public sealed class BankDialog : EditDialog
     private void FarbeSetzen(Color c)
     {
         _farbWert = c;
-        _farbe.BackColor = c;
+        _farbe.Farbe = c;
     }
 
     protected override string? Pruefen() => _name.Text.Trim().Length == 0 ? "Bitte einen Namen für die Bank eingeben." : null;

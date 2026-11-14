@@ -29,6 +29,45 @@ public static class Farben
     public static Color Betrag(decimal b) => b < 0 ? Theme.P.Danger : Theme.P.Text;
 }
 
+/// <summary>Colour swatch; paints itself so the theme never overwrites its colour.</summary>
+public sealed class FarbFeld : Control
+{
+    private Color _farbe;
+
+    public FarbFeld(Color farbe)
+    {
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+        _farbe = farbe;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+    }
+
+    public Color Farbe { get => _farbe; set { _farbe = value; Invalidate(); } }
+
+    protected override void OnKeyDown(KeyEventArgs e) { if (e.KeyCode is Keys.Enter or Keys.Space) OnClick(EventArgs.Empty); base.OnKeyDown(e); }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.Clear(Ui.EffectiveBack(this));
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        var r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (var path = Ui.Rounded(r, Ui.S(6)))
+        {
+            using var b = new SolidBrush(_farbe);
+            g.FillPath(b, path);
+            using var pen = new Pen(Focused ? Theme.P.Accent : Theme.P.Border, Focused ? 2f : 1f);
+            g.DrawPath(pen, path);
+        }
+        TextRenderer.DrawText(g, Farben.Hex(_farbe), Ui.Small, r, Farben.TextAuf(_farbe), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+    }
+}
+
+public static class Wort
+{
+    public static string Anzahl(int n, string eins, string mehr) => $"{n} {(n == 1 ? eins : mehr)}";
+}
+
 public static class BankLogo
 {
     public static void Zeichnen(Graphics g, Rectangle r, string farbe, string kuerzel)
@@ -115,7 +154,8 @@ public sealed class AuswahlFeld : InputBox
         for (int i = 0; i < _eintraege.Count; i++)
         {
             int idx = i;
-            var item = new ToolStripMenuItem(_eintraege[i].Text) { Checked = i == _index && !Bearbeitbar, Font = Ui.Base };
+            bool aktuell = Bearbeitbar ? _eintraege[i].Text == Box.Text : i == _index;
+            var item = new ToolStripMenuItem((aktuell ? "✓  " : "     ") + _eintraege[i].Text) { Font = aktuell ? Ui.Bold : Ui.Base, Padding = new Padding(0, Ui.S(3), 0, Ui.S(3)) };
             item.Click += (_, _) => { Waehle(idx); Box.Focus(); if (Bearbeitbar) Box.SelectionStart = Box.TextLength; };
             _menu.Items.Add(item);
         }
@@ -411,10 +451,31 @@ public static class Optik
 {
     public static void StyleMenu(ToolStrip menu)
     {
-        menu.Renderer = new ToolStripProfessionalRenderer(new MenuColors()) { RoundedEdges = false };
+        menu.Renderer = new MenuRenderer();
         menu.BackColor = Theme.P.Surface;
         menu.ForeColor = Theme.P.Text;
         foreach (ToolStripItem i in menu.Items) i.ForeColor = Theme.P.Text;
+    }
+
+    private sealed class MenuRenderer() : ToolStripProfessionalRenderer(new MenuColors())
+    {
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            if (!e.Item.Selected || !e.Item.Enabled) return;
+            var r = new Rectangle(Ui.S(3), 1, e.Item.Width - Ui.S(6), e.Item.Height - 2);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = Ui.Rounded(r, Ui.S(5));
+            using var b = new SolidBrush(Theme.P.Selection);
+            e.Graphics.FillPath(b, path);
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            e.TextColor = e.Item.Enabled ? Theme.P.Text : Theme.P.Muted;
+            base.OnRenderItemText(e);
+        }
+
+        protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e) { }
     }
 
     private sealed class MenuColors : ProfessionalColorTable
@@ -426,6 +487,10 @@ public static class Optik
         public override Color MenuBorder => Theme.P.Border;
         public override Color MenuItemBorder => Theme.P.Selection;
         public override Color MenuItemSelected => Theme.P.Selection;
+        public override Color MenuItemSelectedGradientBegin => Theme.P.Selection;
+        public override Color MenuItemSelectedGradientEnd => Theme.P.Selection;
+        public override Color MenuItemPressedGradientBegin => Theme.P.Selection;
+        public override Color MenuItemPressedGradientEnd => Theme.P.Selection;
         public override Color SeparatorDark => Theme.P.Border;
         public override Color SeparatorLight => Theme.P.Surface;
         public override Color CheckBackground => Theme.P.Selection;

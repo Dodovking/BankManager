@@ -34,6 +34,7 @@ public sealed class MainForm : Form
     private UpdateInfo? _verfuegbar;
     private bool _updating;
     private bool _gefragt;
+    private Seite? _letzteSeite;
 
     public UebersichtSeite Uebersicht { get; }
     public BankenSeite Banken { get; }
@@ -235,6 +236,7 @@ public sealed class MainForm : Form
         }
         _sperrTimer.Stop();
         _s.Sperren();
+        if (_aktuell != null) _letzteSeite = _aktuell == BankDetail ? Banken : _aktuell;
         _aktuell = null;
         _content.Controls.Clear();
         _root.Controls.Clear();
@@ -256,8 +258,11 @@ public sealed class MainForm : Form
         Theme.Apply(_shell);
         _s.Entsperrt(daten);
         BankDetail.Bank = null;
-        Zeige(Uebersicht);
+        var ziel = _letzteSeite ?? Uebersicht;
+        ziel.AutoScrollPosition = Point.Empty;
+        Zeige(ziel);
         VerbergenSymbol();
+        if (Visible) { Activate(); _content.Focus(); }
         if (!Fotomodus) _sperrTimer.Start();
         StatusStandard();
     }
@@ -319,7 +324,7 @@ public sealed class MainForm : Form
         var t = _s.Daten;
         int karten = t.AlleKarten.Count();
         var sperre = _s.Einstellungen.AutoSperreMinuten > 0 ? $"sperrt nach {_s.Einstellungen.AutoSperreMinuten} Min. ohne Eingabe" : "automatische Sperre aus";
-        _statusText.Text = $"{t.Banken.Count} Banken  ·  {t.AlleKonten.Count()} Konten  ·  {karten} Karten  ·  verschlüsselt gespeichert  ·  {sperre}  ·  Version {Updater.CurrentVersion.ToString(3)}";
+        _statusText.Text = $"{Wort.Anzahl(t.Banken.Count, "Bank", "Banken")}  ·  {Wort.Anzahl(t.AlleKonten.Count(), "Konto", "Konten")}  ·  {Wort.Anzahl(karten, "Karte", "Karten")}  ·  verschlüsselt gespeichert  ·  {sperre}  ·  Version {Updater.CurrentVersion.ToString(3)}";
     }
 
     public void Kopieren(string text, string was, bool geheim = false)
@@ -365,7 +370,7 @@ public sealed class MainForm : Form
 
     public void BankLoeschen(Bank bank)
     {
-        var extra = bank.Konten.Count > 0 ? $"\n\nDabei werden auch {bank.Konten.Count} Konto/Konten mit Karten und Verlauf gelöscht." : "";
+        var extra = bank.Konten.Count > 0 ? $"\n\nDabei werden auch {Wort.Anzahl(bank.Konten.Count, "Konto", "Konten")} mit Karten und Verlauf gelöscht." : "";
         if (!Bestaetigen($"{bank.Name} wirklich löschen?{extra}", "Bank löschen")) return;
         var ids = bank.Konten.Select(k => k.Id).ToHashSet();
         _s.T.Banken.Remove(bank);

@@ -83,13 +83,13 @@ public sealed class UebersichtSeite : Seite
         _schulden.Wert = S.Geld(schuld);
         _schulden.WertFarbe = schuld > 0 ? Theme.P.Danger : null;
         _schulden.SymbolFarbe = schuld > 0 ? Theme.P.Danger : Theme.P.Muted;
-        _schulden.Unterzeile = schuld > 0 ? $"{t.AlleKonten.Count(k => k.Kontostand < 0)} Konto/Konten im Minus" : "keine Schulden eingetragen";
+        _schulden.Unterzeile = schuld > 0 ? $"{Wort.Anzahl(t.AlleKonten.Count(k => k.Kontostand < 0), "Konto", "Konten")} im Minus" : "keine Schulden eingetragen";
         _netto.Wert = S.Geld(netto);
         _netto.WertFarbe = netto < 0 ? Theme.P.Danger : null;
         _netto.Unterzeile = "Guthaben minus Schulden";
         _fix.Wert = S.Geld(aus);
         _fix.SymbolFarbe = Theme.P.Warning;
-        _fix.Unterzeile = ein > 0 ? $"Einnahmen {S.Geld(ein)} · übrig {S.Geld(ein - aus)}" : $"{t.Zahlungen.Count(z => z.Aktiv && !z.IstEinnahme)} regelmäßige Ausgaben";
+        _fix.Unterzeile = ein > 0 ? $"Einnahmen {S.Geld(ein)} · übrig {S.Geld(ein - aus)}" : Wort.Anzahl(t.Zahlungen.Count(z => z.Aktiv && !z.IstEinnahme), "regelmäßige Ausgabe", "regelmäßige Ausgaben");
 
         _donut.Teile.Clear();
         foreach (var (bank, summe) in Finanzen.ProBank(t).Where(x => x.Summe != 0))
@@ -144,7 +144,7 @@ public sealed class UebersichtSeite : Seite
     private void Anordnen()
     {
         int pad = 0, gap = Ui.S(16);
-        int w = Math.Max(Ui.S(600), ClientSize.Width - (VerticalScroll.Visible ? 0 : 0) - Ui.S(2));
+        int w = Math.Max(Ui.S(600), ClientSize.Width - SystemInformation.VerticalScrollBarWidth - Ui.S(4));
         int y = 0;
         int spalten = w >= Ui.S(1000) ? 4 : 2;
         int kw = (w - gap * (spalten - 1)) / spalten;
@@ -229,7 +229,7 @@ public sealed class BankZeile : Control, IThemed
         BankLogo.Zeichnen(g, new Rectangle(Ui.S(8), Ui.S(10), Ui.S(36), Ui.S(36)), _bank.Farbe, _bank.AnzeigeKuerzel);
         TextRenderer.DrawText(g, _bank.Name, Ui.Bold, new Point(Ui.S(56), Ui.S(9)), p.Text, TextFormatFlags.NoPrefix);
         int karten = _bank.Konten.Sum(k => k.Karten.Count);
-        var info = _bank.Konten.Count == 0 ? "noch keine Konten" : $"{_bank.Konten.Count} Konto{(_bank.Konten.Count == 1 ? "" : "en")}" + (karten > 0 ? $" · {karten} Karte{(karten == 1 ? "" : "n")}" : "");
+        var info = _bank.Konten.Count == 0 ? "noch keine Konten" : Wort.Anzahl(_bank.Konten.Count, "Konto", "Konten") + (karten > 0 ? " · " + Wort.Anzahl(karten, "Karte", "Karten") : "");
         TextRenderer.DrawText(g, info, Ui.Small, new Point(Ui.S(57), Ui.S(30)), p.Muted, TextFormatFlags.NoPrefix);
         int rechts = (_online.Visible ? _online.Left : Width) - Ui.S(20);
         TextRenderer.DrawText(g, _app.S.Geld(_bank.Summe), Ui.CardTitle, new Rectangle(0, 0, rechts, Height), Farben.Betrag(_bank.Summe),
@@ -275,7 +275,7 @@ public sealed class BankenSeite : Seite
     }
 
     public override string Titel => "Banken";
-    public override string Untertitel => S.Daten == null ? "" : $"{T.Banken.Count} Banken · zusammen {S.Geld(Finanzen.Netto(T))}";
+    public override string Untertitel => S.Daten == null ? "" : $"{Wort.Anzahl(T.Banken.Count, "Bank", "Banken")} · zusammen {S.Geld(Finanzen.Netto(T))}";
     public override string? AktionText => "+ Bank hinzufügen";
     public override void HauptAktion(Control anker) => App.BankNeu();
 
@@ -354,7 +354,7 @@ public sealed class BankKachel : Card
         BankLogo.Zeichnen(g, new Rectangle(Ui.S(18), Ui.S(24), Ui.S(46), Ui.S(46)), _bank.Farbe, _bank.AnzeigeKuerzel);
         TextRenderer.DrawText(g, _bank.Name, Ui.CardTitle, new Rectangle(Ui.S(76), Ui.S(26), Width - Ui.S(90), Ui.S(24)), p.Text, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
         int karten = _bank.Konten.Sum(k => k.Karten.Count);
-        var info = _bank.Konten.Count == 0 ? "noch keine Konten" : $"{_bank.Konten.Count} Konto{(_bank.Konten.Count == 1 ? "" : "en")}" + (karten > 0 ? $" · {karten} Karte{(karten == 1 ? "" : "n")}" : "");
+        var info = _bank.Konten.Count == 0 ? "noch keine Konten" : Wort.Anzahl(_bank.Konten.Count, "Konto", "Konten") + (karten > 0 ? " · " + Wort.Anzahl(karten, "Karte", "Karten") : "");
         TextRenderer.DrawText(g, info, Ui.Small, new Point(Ui.S(77), Ui.S(52)), p.Muted, TextFormatFlags.NoPrefix);
         TextRenderer.DrawText(g, "Summe", Ui.Small, new Point(Ui.S(18), Ui.S(86)), p.Muted, TextFormatFlags.NoPrefix);
         TextRenderer.DrawText(g, _app.S.Geld(_bank.Summe), Ui.Title, new Rectangle(Ui.S(16), Ui.S(102), Width - Ui.S(32), Ui.S(34)), Farben.Betrag(_bank.Summe),
@@ -409,7 +409,7 @@ public sealed class BankDetailSeite : Seite
     }
 
     public override string Titel => Bank?.Name ?? "Bank";
-    public override string Untertitel => Bank == null ? "" : $"{Bank.Konten.Count} Konten · Summe {S.Geld(Bank.Summe)}";
+    public override string Untertitel => Bank == null ? "" : $"{Wort.Anzahl(Bank.Konten.Count, "Konto", "Konten")} · Summe {S.Geld(Bank.Summe)}";
     public override string? AktionText => "+ Konto hinzufügen";
     public override void HauptAktion(Control anker) { if (Bank != null) App.KontoNeu(Bank); }
 
@@ -420,7 +420,7 @@ public sealed class BankDetailSeite : Seite
         var scroll = AutoScrollPosition;
         SuspendLayout();
         foreach (var c in _innen.Controls.Cast<Control>().ToList()) { _innen.Controls.Remove(c); c.Dispose(); }
-        int w = Math.Max(Ui.S(600), ClientSize.Width - Ui.S(2));
+        int w = Math.Max(Ui.S(600), ClientSize.Width - SystemInformation.VerticalScrollBarWidth - Ui.S(4));
         int y = 0;
         var b = Bank;
 
@@ -647,6 +647,17 @@ public sealed class KartenZeile : Control, IThemed
     }
 }
 
+public sealed class NotrufKarte : Card
+{
+    protected override void PaintContent(Graphics g)
+    {
+        TextRenderer.DrawText(g, Glyph.Telefon, Glyph.Gross, new Rectangle(Ui.S(16), 0, Ui.S(36), Height), Theme.P.Danger, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
+        TextRenderer.DrawText(g, "Karte verloren oder gestohlen?", Ui.Bold, new Point(Ui.S(62), Ui.S(15)), Theme.P.Text, TextFormatFlags.NoPrefix);
+        TextRenderer.DrawText(g, "Sofort sperren: Sperr-Notruf 116 116 (kostenlos, rund um die Uhr) · aus dem Ausland +49 116 116 · oder direkt bei deiner Bank bzw. in ihrer App.",
+            Ui.Small, new Rectangle(Ui.S(62), Ui.S(38), Width - Ui.S(250), Ui.S(20)), Theme.P.Muted, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+    }
+}
+
 // ============================== Tabellen-Seiten ==============================
 
 public abstract class TabellenSeite : Seite
@@ -779,7 +790,7 @@ public sealed class KontenSeite : TabellenSeite
     }
 
     public override string Titel => "Konten";
-    public override string Untertitel => S.Daten == null ? "" : $"{T.AlleKonten.Count()} Konten bei {T.Banken.Count(b => b.Konten.Count > 0)} Banken";
+    public override string Untertitel => S.Daten == null ? "" : $"{Wort.Anzahl(T.AlleKonten.Count(), "Konto", "Konten")} bei {Wort.Anzahl(T.Banken.Count(b => b.Konten.Count > 0), "Bank", "Banken")}";
     public override string? AktionText => "+ Konto hinzufügen";
     public override void HauptAktion(Control anker) => App.KontoNeu(null);
 
@@ -793,7 +804,7 @@ public sealed class KontenSeite : TabellenSeite
                 zeilen.Add((k, [b.Name, k.Name, Texte.Name(k.Art), S.IbanText(k.Iban), k.Kontostand, k.StandVom]));
         Fuellen(zeilen);
         var sichtbar = zeilen.Select(z => (Konto)z.Item1).ToList();
-        FussText.Text = $"{sichtbar.Count} Konten  ·  Summe {S.Geld(sichtbar.Where(k => k.Waehrung == "EUR").Sum(k => k.Kontostand))}";
+        FussText.Text = $"{Wort.Anzahl(sichtbar.Count, "Konto", "Konten")}  ·  Summe {S.Geld(sichtbar.Where(k => k.Waehrung == "EUR").Sum(k => k.Kontostand))}";
     }
 
     protected override void Formatieren(DataGridViewCellFormattingEventArgs e)
@@ -834,7 +845,7 @@ public sealed class KontenSeite : TabellenSeite
 public sealed class KartenSeite : TabellenSeite
 {
     private readonly FlatButton _edit, _del;
-    private readonly Card _notruf = new() { Dock = DockStyle.Top };
+    private readonly NotrufKarte _notruf = new() { Dock = DockStyle.Top };
 
     public KartenSeite(MainForm app) : base(app)
     {
@@ -856,14 +867,6 @@ public sealed class KartenSeite : TabellenSeite
         kopieren.Click += (_, _) => App.Kopieren("116116", "Sperr-Notruf");
         _notruf.Controls.Add(kopieren);
         _notruf.Resize += (_, _) => kopieren.Location = new Point(_notruf.Width - kopieren.Width - Ui.S(18), (_notruf.Height - kopieren.Height) / 2);
-        _notruf.Paint += (_, e) =>
-        {
-            var g = e.Graphics;
-            TextRenderer.DrawText(g, Glyph.Telefon, Glyph.Gross, new Rectangle(Ui.S(16), 0, Ui.S(36), _notruf.Height), Theme.P.Danger, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(g, "Karte verloren oder gestohlen?", Ui.Bold, new Point(Ui.S(62), Ui.S(15)), Theme.P.Text, TextFormatFlags.NoPrefix);
-            TextRenderer.DrawText(g, "Sofort sperren: Sperr-Notruf 116 116 (kostenlos, rund um die Uhr) · aus dem Ausland +49 116 116 · oder direkt bei deiner Bank bzw. in ihrer App.",
-                Ui.Small, new Rectangle(Ui.S(62), Ui.S(38), _notruf.Width - Ui.S(250), Ui.S(20)), Theme.P.Muted, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
-        };
         var abstand = new Panel { Dock = DockStyle.Top, Height = Ui.S(14) };
         Controls.Add(abstand);
         Controls.Add(_notruf);
@@ -874,7 +877,7 @@ public sealed class KartenSeite : TabellenSeite
     }
 
     public override string Titel => "Karten";
-    public override string Untertitel => S.Daten == null ? "" : $"{T.AlleKarten.Count()} Karten · nur die letzten 4 Ziffern werden gespeichert";
+    public override string Untertitel => S.Daten == null ? "" : $"{Wort.Anzahl(T.AlleKarten.Count(), "Karte", "Karten")} · nur die letzten 4 Ziffern werden gespeichert";
     public override string? AktionText => "+ Karte hinzufügen";
     public override void HauptAktion(Control anker) => App.KarteNeu(null);
 
@@ -891,7 +894,7 @@ public sealed class KartenSeite : TabellenSeite
         }
         Fuellen(zeilen);
         int bald = T.AlleKarten.Count(x => x.Karte.LaeuftBaldAb(heute) || x.Karte.IstAbgelaufen(heute));
-        FussText.Text = $"{zeilen.Count} Karten" + (bald > 0 ? $"  ·  {bald} abgelaufen oder bald ablaufend" : "");
+        FussText.Text = Wort.Anzahl(zeilen.Count, "Karte", "Karten") + (bald > 0 ? $"  ·  {bald} abgelaufen oder bald ablaufend" : "");
     }
 
     protected override void Formatieren(DataGridViewCellFormattingEventArgs e)
@@ -967,15 +970,15 @@ public sealed class ZahlungenSeite : TabellenSeite
         decimal ein = Finanzen.EinnahmenProMonat(T), aus = Finanzen.AusgabenProMonat(T);
         _ein.Wert = S.Geld(ein);
         _ein.SymbolFarbe = Theme.P.Success;
-        _ein.Unterzeile = $"{T.Zahlungen.Count(z => z.Aktiv && z.IstEinnahme)} Einnahmen";
+        _ein.Unterzeile = Wort.Anzahl(T.Zahlungen.Count(z => z.Aktiv && z.IstEinnahme), "Einnahme", "Einnahmen");
         _aus.Wert = S.Geld(aus);
         _aus.SymbolFarbe = Theme.P.Danger;
-        _aus.Unterzeile = $"{T.Zahlungen.Count(z => z.Aktiv && !z.IstEinnahme)} Ausgaben · {S.Geld(aus * 12)} im Jahr";
+        _aus.Unterzeile = $"{Wort.Anzahl(T.Zahlungen.Count(z => z.Aktiv && !z.IstEinnahme), "Ausgabe", "Ausgaben")} · {S.Geld(aus * 12)} im Jahr";
         _rest.Wert = S.Geld(ein - aus);
         _rest.WertFarbe = ein - aus < 0 ? Theme.P.Danger : null;
         _rest.Unterzeile = "Einnahmen minus Ausgaben";
         _kopf.Invalidate(true);
-        FussText.Text = $"{zeilen.Count} Zahlungen";
+        FussText.Text = Wort.Anzahl(zeilen.Count, "Zahlung", "Zahlungen");
     }
 
     protected override void Formatieren(DataGridViewCellFormattingEventArgs e)
@@ -1110,7 +1113,7 @@ public sealed class EinstellungenSeite : Seite
 
     private void Anordnen()
     {
-        int w = Math.Max(Ui.S(600), ClientSize.Width - Ui.S(2));
+        int w = Math.Max(Ui.S(600), ClientSize.Width - SystemInformation.VerticalScrollBarWidth - Ui.S(4));
         int y = 0;
         foreach (var (karte, zeilen) in _karten)
         {
