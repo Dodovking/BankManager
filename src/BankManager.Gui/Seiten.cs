@@ -78,7 +78,7 @@ public sealed class UebersichtSeite : Seite
         decimal aus = Finanzen.AusgabenProMonat(t), ein = Finanzen.EinnahmenProMonat(t);
         int konten = t.AlleKonten.Count();
         _vermoegen.Wert = S.Geld(verm);
-        _vermoegen.Unterzeile = $"auf {t.AlleKonten.Count(k => k.Kontostand > 0)} von {konten} Konten";
+        _vermoegen.Unterzeile = $"auf {t.AlleKonten.Count(k => k.Kontostand > 0)} von {Wort.Anzahl(konten, "Konto", "Konten")}";
         _vermoegen.SymbolFarbe = Theme.P.Success;
         _schulden.Wert = S.Geld(schuld);
         _schulden.WertFarbe = schuld > 0 ? Theme.P.Danger : null;
@@ -653,8 +653,8 @@ public sealed class NotrufKarte : Card
     {
         TextRenderer.DrawText(g, Glyph.Telefon, Glyph.Gross, new Rectangle(Ui.S(16), 0, Ui.S(36), Height), Theme.P.Danger, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
         TextRenderer.DrawText(g, "Karte verloren oder gestohlen?", Ui.Bold, new Point(Ui.S(62), Ui.S(15)), Theme.P.Text, TextFormatFlags.NoPrefix);
-        TextRenderer.DrawText(g, "Sofort sperren: Sperr-Notruf 116 116 (kostenlos, rund um die Uhr) · aus dem Ausland +49 116 116 · oder direkt bei deiner Bank bzw. in ihrer App.",
-            Ui.Small, new Rectangle(Ui.S(62), Ui.S(38), Width - Ui.S(250), Ui.S(20)), Theme.P.Muted, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+        TextRenderer.DrawText(g, "Sofort sperren: Sperr-Notruf 116 116 (kostenlos, rund um die Uhr), aus dem Ausland +49 116 116 – oder direkt bei deiner Bank bzw. in ihrer App.",
+            Ui.Small, new Rectangle(Ui.S(62), Ui.S(38), Width - Ui.S(250), Ui.S(34)), Theme.P.Muted, TextFormatFlags.NoPrefix | TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis);
     }
 }
 
@@ -862,7 +862,7 @@ public sealed class KartenSeite : TabellenSeite
         _del = Werkzeugknopf("Löschen", Loeschen, ButtonKind.Danger);
         _edit = Werkzeugknopf("Bearbeiten", Bearbeiten);
 
-        _notruf.Height = Ui.S(72);
+        _notruf.Height = Ui.S(84);
         var kopieren = new FlatButton("116 116 kopieren") { Height = Ui.S(32) };
         kopieren.Click += (_, _) => App.Kopieren("116116", "Sperr-Notruf");
         _notruf.Controls.Add(kopieren);

@@ -146,7 +146,12 @@ internal static class Updater
             try
             {
                 using var p = Process.GetProcessById(pid);
-                p.WaitForExit(60_000);
+                // An old version that hangs on exit (e.g. stuck on an error box) would keep the single-instance lock forever.
+                // All data is saved immediately, so ending it is safe.
+                if (!p.WaitForExit(15_000))
+                {
+                    try { p.Kill(); p.WaitForExit(10_000); } catch { }
+                }
             }
             catch (ArgumentException) { }
             catch (InvalidOperationException) { }

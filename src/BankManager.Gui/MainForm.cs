@@ -572,6 +572,8 @@ public sealed class MainForm : Form
         try
         {
             if (_s.Daten != null) _s.Datei.Speichern(_s.Daten);
+            EinstellungenMerken();
+            _s.EinstellungenSpeichern();
             Updater.Swap();
             Updater.StartUpdated(StartArgs);
         }
@@ -583,7 +585,9 @@ public sealed class MainForm : Form
                 "Update", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        Close();
+        // The program file was just swapped: exit hard instead of running more code (lazy loads) from the moved EXE.
+        _s.Sperren();
+        Environment.Exit(0);
     }
 
     // ---------- Fenster ----------
@@ -628,14 +632,23 @@ public sealed class MainForm : Form
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
-    protected override void OnFormClosing(FormClosingEventArgs e)
+    private void EinstellungenMerken()
     {
         var st = _s.Einstellungen;
         st.Maximiert = WindowState == FormWindowState.Maximized;
         var b = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
         st.FensterBreite = b.Width;
         st.FensterHoehe = b.Height;
-        if (!Fotomodus) _s.EinstellungenSpeichern();
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        try
+        {
+            EinstellungenMerken();
+            if (!Fotomodus && !_updating) _s.EinstellungenSpeichern();
+        }
+        catch { }
         SystemEvents.SessionSwitch -= SessionSwitch;
         Theme.Changed -= ThemeGeaendert;
         _sperrTimer.Stop();
